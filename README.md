@@ -1,6 +1,16 @@
-# Flight control of a simulated drone
+<p align="center">
+  <img src="https://cellfi.co.il/wp-content/uploads/2023/06/tello-1.webp" alt="Logo" width="300" height="300" align="right">
+</p>
 
-This project is a simple drone maze navigation simulation using Pygame. The drone navigates through a randomly generated maze and returns to its starting point when its battery is low. This README provides an overview of the code, its structure, and how to run the simulation.
+# Flight control of a simulated drone
+This project is a simple drone maze navigation simulation using Pygame. 
+The drone navigates through a randomly generated maze and returns to its starting point when its battery is low.
+This README provides an overview of the code, its structure, and how to run the simulation.
+
+
+
+
+
 
 ## Table of Contents
 
