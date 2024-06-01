@@ -8,8 +8,7 @@ This project is a simple drone maze navigation simulation using Pygame. The dron
 - [Usage](#usage)
 - [Code Structure](#code-structure)
 - [Features](#features)
-- [Dependencies](#dependencies)
-- [License](#license)
+
 
 ## Installation
 
@@ -17,16 +16,34 @@ This project is a simple drone maze navigation simulation using Pygame. The dron
 
    ```sh
    git clone https://github.com/NirGeron/simulated-drone.git
+
+## Usage
+Run the script to start the simulation:
+
+python map_test.py
+
+## Requirements
+
+- Python 3.7+
+- Pygame 2.0+
    
 
+## Features
+
+- Randomly generated maze.
+- Drone movement controlled via keyboard input.
+- Battery life simulation.
+- Collision detection with maze walls.
+- Pathfinding using BFS to return to the starting point when the battery is low.
+- Sensor data simulation.
+
 ## Code Structure
-### Main Components
 
 1. Initializes Pygame and sets up display parameters.
 Defines constants for the drone's properties and simulation parameters.
 BFS Pathfinding:
 
-2. bfs_find_path(points, start, dest): Finds the shortest path between two points using the Breadth-First Search algorithm.
+bfs_find_path(points, start, dest): Finds the shortest path between two points using the Breadth-First Search algorithm.
 Drone Class:
 
 3. Manages the drone's state, movement, sensor updates, and drawing the drone on the screen.
@@ -42,3 +59,9 @@ Main Loop:
 Updates the drone's state, checks for collisions, and updates sensor data.
 Draws the maze, obstacles, and drone on the screen.
 Manages the drone's behavior when the battery is low.
+
+### Main Loop
+Handles events, updates the drone, and redraws the screen.
+
+
+  
