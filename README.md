@@ -18,6 +18,7 @@ This README provides an overview of the code, its structure, and how to run the 
 - [Usage](#usage)
 - [Code Structure](#code-structure)
 - [Features](#features)
+- [Screenshots](#Screenshots)
 
 
 ## Installation
@@ -73,5 +74,10 @@ Manages the drone's behavior when the battery is low.
 ### Main Loop
 Handles events, updates the drone, and redraws the screen.
 
+## Screenshots
+### Random Map
+![Screenshot 2024-06-01 162835](https://github.com/NirGeron/simulated-drone/assets/75199660/43cbec92-5917-435a-838e-c91413ec652a)
+### Map From Data
+![Screenshot 2024-06-01 163105](https://github.com/NirGeron/simulated-drone/assets/75199660/07977b9b-4b55-43d3-983b-e9213523f5dd)
 
-  
+
