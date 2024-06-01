@@ -31,6 +31,19 @@ class Drone:
         self.initial_x = x
         self.initial_y = y
         self.reset()
+        self.x = self.initial_x
+        self.y = self.initial_y
+        self.home = (self.x, self.y)
+        self.vx = 0
+        self.vy = 0
+        self.yaw = 0
+        self.pitch = 0
+        self.roll = 0
+        self.current_index = 0
+        self.battery = MAX_BATTERY_LIFE_SEC
+        self.crashed = False
+        self.path = [(self.x, self.y)]
+        self.path_to_home = self.bfs_find_path(self.path, self.path[-1], self.home)
 
     def reset(self):
         self.x = self.initial_x
@@ -47,14 +60,8 @@ class Drone:
         self.path = [(self.x, self.y)]
         self.path_to_home = self.bfs_find_path(self.path, self.path[-1], self.home)
 
-    def go_home(self):
-        if self.path_to_home and self.current_index < len(self.path_to_home):
-            self.current_position = self.path_to_home[self.current_index]
-            self.current_index += 1
-        else:
-            self.current_index = 0
-
-    def bfs_find_path(self, path, start, dest):
+    @staticmethod
+    def bfs_find_path(path, start, dest):
         neighbors = {point: [] for point in path}
 
         def find_neighbors(point):
@@ -96,34 +103,23 @@ class Drone:
             self.path.append((int(self.x), int(self.y)))
             self.battery -= 0.35 / SENSOR_UPDATE_RATE
 
-    def draw(self, screen):
+    def draw(self, game_screen):
         if len(self.path) > 1:
-            pygame.draw.lines(screen, BLACK, False, [(int(x), int(y)) for x, y in self.path], 2)
+            pygame.draw.lines(game_screen, BLACK, False, [(int(x), int(y)) for x, y in self.path], 2)
 
         arrow_length = DRONE_RADIUS_PX * 2
         end_x = self.x + arrow_length * math.cos(math.radians(self.yaw))
         end_y = self.y - arrow_length * math.sin(math.radians(self.yaw))
-        color = RED if self.crashed else BLUE
-        pygame.draw.line(screen, color, (self.x, self.y), (end_x, end_y), 5)
-        pygame.draw.circle(screen, color, (int(self.x), int(self.y)), DRONE_RADIUS_PX)
+        color_of_drone = RED if self.crashed else BLUE
+        pygame.draw.line(game_screen, color_of_drone, (self.x, self.y), (end_x, end_y), 5)
+        pygame.draw.circle(game_screen, color_of_drone, (int(self.x), int(self.y)), DRONE_RADIUS_PX)
 
     def update_sensors(self):
         return {
             'distance': [100, 100, 100, 100, 100, 100],
-            'yaw': self.yaw,
-            'Vx': self.vx,
-            'Vy': self.vy,
-            'Z': 0,
-            'baro': 1013.25,
-            'bat': self.battery,
-            'pitch': self.pitch,
-            'roll': self.roll,
-            'accX': 0,
-            'accY': 0,
-            'accZ': 0,
-            'path': self.path,
-            'path_to_home': self.path_to_home,
-        }
+            'yaw': self.yaw, 'Vx': self.vx, 'Vy': self.vy, 'Z': 0, 'baro': 1013.25,
+            'bat': self.battery, 'pitch': self.pitch,
+            'roll': self.roll, 'accX': 0, 'accY': 0, 'accZ': 0, 'path': self.path, 'path_to_home': self.path_to_home}
 
     def check_collision(self, obstacles):
         drone_rect = pygame.Rect(int(self.x - DRONE_RADIUS_PX), int(self.y - DRONE_RADIUS_PX), DRONE_RADIUS_PX * 2,
@@ -230,8 +226,8 @@ if __name__ == '__main__':
                     color = (255, 255, 255) if grid[row][col] == 1 else (0, 0, 0)
                     pygame.draw.rect(screen, color, (col * grid_size, row * grid_size, grid_size, grid_size))
 
-            for obstacle in obstacles:
-                pygame.draw.rect(screen, BLACK, obstacle)
+            for obs in obstacles:
+                pygame.draw.rect(screen, BLACK, obs)
 
             drone.draw(screen)
 
@@ -272,8 +268,8 @@ if __name__ == '__main__':
                 print(sensor_data)
 
             screen.fill(WHITE)
-            for obstacle in obstacles:
-                pygame.draw.rect(screen, BLACK, obstacle)
+            for obs in obstacles:
+                pygame.draw.rect(screen, BLACK, obs)
             drone.draw(screen)
 
             speed = math.sqrt(drone.vx ** 2 + drone.vy ** 2)
@@ -288,7 +284,6 @@ if __name__ == '__main__':
             pygame.time.Clock().tick(60)
 
         if len(drone.path) == 1 and drone.battery < (MAX_BATTERY_LIFE_SEC / 2):
-            time.sleep(2)
             running = False
             print("drone got back to the start point!")
             pygame.quit()
