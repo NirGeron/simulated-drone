@@ -321,6 +321,6 @@ def main(image_path):
 
 
 if __name__ == '__main__':
-    image_path = 'Maps\p11.png'  # Update this path back homogenous every maudified tasks retainerirections
+    image_path = 'Maps/p11.png'  # Update this path back homogenous every maudified tasks retainerirections
     main(image_path)
     os.remove("maze_data.pkl")
