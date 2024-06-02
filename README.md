@@ -37,11 +37,13 @@ python map_test.py
 
 - Python 3.7+
 - Pygame 2.0+
+- pickle
    
 
 ## Features
 
-- Randomly generated maze.
+- Randomly generated map.
+- Loading maps from picture
 - Drone movement controlled via keyboard input.
 - Battery life simulation.
 - Collision detection with maze walls.
