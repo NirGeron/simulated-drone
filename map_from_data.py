@@ -6,6 +6,7 @@ import os
 import random
 from collections import deque
 from PIL import Image
+import random_map
 
 # Initialize Pygame
 pygame.init()
@@ -15,7 +16,7 @@ PIXEL_TO_CM = 2.5
 DRONE_RADIUS_CM = 10
 DRONE_RADIUS_PX = int(DRONE_RADIUS_CM / PIXEL_TO_CM)
 SENSOR_UPDATE_RATE = 10  # 10Hz
-MAX_BATTERY_LIFE_SEC = 100
+MAX_BATTERY_LIFE_SEC = 10
 MAX_SPEED_MPS = 10
 ACCELERATION_MPS2 = 1
 MAX_PITCH_DEG = 10
@@ -37,6 +38,7 @@ BLACK = (0, 0, 0)
 BLUE = (0, 0, 255)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
+GRAY = (200, 200, 200)
 
 # Font
 font = pygame.font.SysFont('Arial', 20)
@@ -54,9 +56,10 @@ def compute_save_obstacles(image_path):
             r, g, b = image.getpixel((x, y))
             if (r, g, b) < obstacle_color_threshold:
                 obstacles.add((x, y))
-                
+
     with open("maze_data.pkl", 'wb') as f:
         pickle.dump(obstacles, f)
+
 
 def load_precomputed_obstacles():
     with open("maze_data.pkl", 'rb') as f:
@@ -124,7 +127,7 @@ class Drone:
         self.battery = MAX_BATTERY_LIFE_SEC
         self.crashed = False
         self.path = [(self.x, self.y)]
-        self.path_to_home = self.bfs_find_path(self.path, self.path[-1], self.home)
+        # self.path_to_home = self.bfs_find_path(self.path, self.path[-1], self.home)
 
     def reset(self):
         self.x = self.initial_x
@@ -139,28 +142,23 @@ class Drone:
         self.battery = MAX_BATTERY_LIFE_SEC
         self.crashed = False
         self.path = [(self.x, self.y)]
-        self.path_to_home = self.bfs_find_path(self.path, self.path[-1], self.home)
+        # self.path_to_home = self.bfs_find_path(self.path, self.path[-1], self.home)
 
-    def go_home(self):
-        if self.path_to_home and self.current_index < len(self.path_to_home):
-            self.current_position = self.path_to_home[self.current_index]
-            self.current_index += 1
-        else:
-            self.current_index = 0
-
-    def bfs_find_path(self, path, start, dest):
-        neighbors = {point: [] for point in path}
+    def bfs_find_path(self):
+        neighbors = {point: [] for point in self.path}
+        dest = self.path[0]
+        start = self.path[-1]
 
         def find_neighbors(point):
             x, y = point
             possible_neighbors = []
-            for px in range(x - 4, x + 5):
-                for py in range(y - 4, y + 5):
-                    if (px, py) != point and (px, py) in path:
+            for px in range(x - 10, x + 10):
+                for py in range(y - 10, y + 10):
+                    if (px, py) != point and (px, py) in self.path:
                         possible_neighbors.append((px, py))
             return possible_neighbors
 
-        for point in path:
+        for point in self.path:
             neighbors[point] = find_neighbors(point)
 
         queue = deque([(start, [start])])
@@ -187,7 +185,8 @@ class Drone:
         if not self.crashed:
             self.x += self.vx / PIXEL_TO_CM
             self.y += self.vy / PIXEL_TO_CM
-            self.path.append((int(self.x), int(self.y)))
+            if self.battery > MAX_BATTERY_LIFE_SEC / 2:
+                self.path.append((int(self.x), int(self.y)))
             self.battery -= 1 / SENSOR_UPDATE_RATE
 
     def draw(self, screen):
@@ -216,7 +215,6 @@ class Drone:
             'accY': 0,
             'accZ': 0,
             'path': self.path,
-            'path_to_home': self.path_to_home,
         }
 
     def check_collision(self, obstacles):
@@ -225,12 +223,30 @@ class Drone:
         for x, y in obstacles:
             if drone_rect.collidepoint(x, y):
                 self.crashed = True
-                self.vx = 0
-                self.vy = 0
-                break
+                return True
 
 
-def main(image_path):
+def draw_message_box(screen, message, width, height):
+    font = pygame.font.Font(None, 36)
+    text = font.render(message, True, BLACK)
+
+    # Calculate the position of the message box
+    box_width = width * 2
+    box_height = height // 4
+    box_x = SCREEN_WIDTH // 6
+    box_y = SCREEN_HEIGHT // 2
+
+    # Draw the message box
+    pygame.draw.rect(screen, GRAY, (box_x, box_y, box_width, box_height))
+    pygame.draw.rect(screen, BLACK, (box_x, box_y, box_width, box_height), 2)
+
+    # Position the text
+    text_x = box_x + (box_width - text.get_width()) // 2
+    text_y = box_y + (box_height - text.get_height()) // 2
+    screen.blit(text, (text_x, text_y))
+
+
+def start_game(image_path):
     compute_save_obstacles(image_path)
     obstacles = load_precomputed_obstacles()
     drone_x, drone_y = find_free_position(obstacles)
@@ -238,13 +254,22 @@ def main(image_path):
     temp = 0
     running = True
     last_update_time = time.time()
-    clock = pygame.time.Clock()  # New clock instance
+    clock = pygame.time.Clock()
+
+    def reload_info():
+        speed = math.sqrt(drone.vx ** 2 + drone.vy ** 2)
+        direction = drone.yaw
+        info_text = font.render(
+            f"Speed: {speed:.2f} m/s, battery:{(int(drone.battery) / MAX_BATTERY_LIFE_SEC) * 100}%, Direction: {direction:.2f}° ",
+            True, BLACK)
+        info_rect = pygame.Rect(10, 10, 350, 30)
+        pygame.draw.rect(screen, WHITE, info_rect)
+        screen.blit(info_text, (10, 10))
 
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-
         if drone.battery > (MAX_BATTERY_LIFE_SEC / 2):
             keys = pygame.key.get_pressed()
             if keys[pygame.K_LEFT]:
@@ -264,7 +289,6 @@ def main(image_path):
                 drone.yaw = 180
             else:
                 drone.vy = 0
-
             drone.move()
             drone.check_collision(obstacles)
 
@@ -274,10 +298,12 @@ def main(image_path):
                 last_update_time = current_time
                 print(sensor_data)
 
-        elif len(drone.path) > 0 and drone.battery < (MAX_BATTERY_LIFE_SEC / 2) and drone.battery > 0:
+        elif drone.battery <= (MAX_BATTERY_LIFE_SEC / 2):
             if temp == 0:
-                drone.path = drone.bfs_find_path({p: 1 for p in drone.path if p not in drone.path_to_home}.keys(),
-                                                 drone.path[-1], drone.home)
+                drone.path = drone.bfs_find_path()
+                draw_message_box(screen, "Battery is under 50%, get back to start point", 300, 300)
+                pygame.display.flip()
+                time.sleep(2)
             temp = 1
             print(f"after bfs: {drone.path}")
             if drone.path is None or len(drone.path) == 0:
@@ -286,7 +312,6 @@ def main(image_path):
 
             next_x, next_y = drone.path.pop(0)
             drone.vx = (next_x - drone.x) * PIXEL_TO_CM
-            os.remove("maze_data.pkl")
             drone.vy = (next_y - drone.y) * PIXEL_TO_CM
 
             drone.move()
@@ -298,29 +323,26 @@ def main(image_path):
                 last_update_time = current_time
                 print(sensor_data)
 
+            if len(drone.path) == 1 or drone.battery < 0:
+                running = False
         screen.fill(WHITE)
         for obstacle in obstacles:
-            screen.set_at(obstacle, BLACK)  # Direct pixel-level opposition appendages
-
+            screen.set_at(obstacle, BLACK)
         drone.draw(screen)
-
-        speed = math.sqrt(drone.vx ** 2 + drone.vy ** 2)
-        direction = drone.yaw
-        info_text = font.render(f"Speed: {speed:.2f} m/s, Direction: {direction:.2f}°, battery: {int(drone.battery)}",
-                                True, BLACK)
-        info_rect = pygame.Rect(10, 10, SCREEN_WIDTH - 20, INFO_DISPLAY_HEIGHT - 10)
-        pygame.draw.rect(screen, WHITE, info_rect)
-        pygame.draw.rect(screen, BLACK, info_rect, 1)
-        screen.blit(info_text, (10, 10))
-
+        reload_info()
         pygame.display.flip()
-
+        if drone.crashed:
+            draw_message_box(screen, "Drone crashed, start a new game", 300, 300)
+            pygame.display.flip()
+            time.sleep(2)
+            start_game(image_path)
         clock.tick(60)  # Ensure fluid adherence onto the optimum cap refresh rate
 
     pygame.quit()
 
 
 if __name__ == '__main__':
-    image_path = 'Maps\p11.png'  # Update this path back homogenous every maudified tasks retainerirections
-    main(image_path)
+    rendom_file = random.randint(11, 15)
+    image_path = f'Maps\p{rendom_file}.png'  # Update this path back homogenous every maudified tasks retainerirections
+    start_game(image_path)
     os.remove("maze_data.pkl")
